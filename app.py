@@ -13,7 +13,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 import yfinance as yf
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv1D, Bidirectional, LSTM, GRU, Dense, Dropout, Attention
+from tensorflow.keras.layers import Conv1D, Bidirectional, LSTM, GRU, Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping
 import ta
 import sqlite3
@@ -163,7 +163,7 @@ def preprocess_data_advanced(data, window_size=60, test_split=0.2, features=['Cl
 
 def build_advanced_model(input_shape, dropout_rate=0.2):
     """
-    Build the advanced hybrid CNN + BiLSTM + GRU + Attention model
+    Build the advanced hybrid CNN + BiLSTM + GRU model
     
     Args:
         input_shape (tuple): Shape of input data
@@ -172,7 +172,7 @@ def build_advanced_model(input_shape, dropout_rate=0.2):
     Returns:
         tensorflow.keras.Model: Compiled model
     """
-    with st.spinner("Building advanced CNN + BiLSTM + GRU + Attention model..."):
+    with st.spinner("Building advanced CNN + BiLSTM + GRU model..."):
         model = Sequential([
             # CNN layer for feature extraction
             Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=input_shape),
@@ -180,8 +180,8 @@ def build_advanced_model(input_shape, dropout_rate=0.2):
             # First BiLSTM layer with return sequences
             Bidirectional(LSTM(64, return_sequences=True)),
             
-            # Attention mechanism
-            Attention(),
+            # Additional LSTM layer (replacing Attention for compatibility)
+            Bidirectional(LSTM(32, return_sequences=True)),
             
             # Dropout
             Dropout(dropout_rate),
@@ -248,7 +248,7 @@ def rolling_window_validation(data, window_size, n_splits=5, features=['Close', 
                 test_split=len(test_data)/(len(train_data)+len(test_data)), features=features
             )
             
-            # Build and train model
+            # Build and train model  
             model = build_advanced_model(X_train.shape[1:], dropout_rate=0.2)
             model.fit(X_train, y_train, epochs=20, batch_size=32, verbose=0, validation_split=0.1)
             
@@ -328,7 +328,7 @@ def train_baseline_models(data, test_size=0.2):
             })
             
             # Train Prophet
-            prophet_model = Prophet(daily_seasonality=False, yearly_seasonality=False)
+            prophet_model = Prophet(daily_seasonality=False, yearly_seasonality=False, weekly_seasonality=False)
             prophet_model.fit(prophet_data)
             
             # Create future dataframe
@@ -443,7 +443,7 @@ def main():
     os.makedirs("models", exist_ok=True)
     
     # Title
-    st.title("Advanced Stock Forecaster (CNN + BiLSTM + GRU + Attention)")
+    st.title("Advanced Stock Forecaster (CNN + BiLSTM + GRU)")
     st.markdown("---")
     
     # Sidebar for inputs
@@ -690,7 +690,7 @@ def main():
         
         - **Stock**: {ticker}
         - **Period**: {start_str} to {end_str}
-        - **Model**: Advanced CNN + BiLSTM + GRU + Attention
+        - **Model**: Advanced CNN + BiLSTM + GRU
         - **Features**: Close Price, RSI(14), MACD
         - **Test RMSE**: ${test_rmse:.2f}
         - **Test MAE**: ${test_mae:.2f}
@@ -705,7 +705,7 @@ def main():
         This application uses state-of-the-art deep learning combining:
         - **Convolutional Neural Networks (CNN)** for feature extraction
         - **Bidirectional LSTM** for capturing long-term dependencies
-        - **Attention Mechanism** for focusing on important time steps
+        - **Additional Bidirectional LSTM** for enhanced pattern recognition
         - **Gated Recurrent Units (GRU)** for efficient sequence modeling
         - **Technical Indicators**: RSI(14) and MACD for enhanced predictions
         
@@ -725,7 +725,7 @@ def main():
         
         ### Model Architecture:
         ```
-        Conv1D → BiLSTM → Attention → BiLSTM → GRU → GRU → Dense → Output
+        Conv1D → BiLSTM → BiLSTM → BiLSTM → GRU → GRU → Dense → Output
         ```
         """)
         
