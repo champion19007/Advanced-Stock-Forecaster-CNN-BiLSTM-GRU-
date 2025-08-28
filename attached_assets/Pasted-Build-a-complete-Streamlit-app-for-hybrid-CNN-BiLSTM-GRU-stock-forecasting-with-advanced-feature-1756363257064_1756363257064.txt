@@ -1,0 +1,64 @@
+Build a complete Streamlit app for hybrid CNN + BiLSTM + GRU stock forecasting with advanced features.  
+
+1. Libraries: pandas, numpy, matplotlib, sklearn (MinMaxScaler, metrics), tensorflow.keras, yfinance, ta (technical indicators), sqlite3, streamlit, statsmodels (for ARIMA), prophet (for baseline comparison).  
+
+2. App UI:  
+   - Title: "Advanced Stock Forecaster (CNN + BiLSTM + GRU + Attention)"  
+   - Dropdown with top 10 tickers: ["AAPL", "MSFT", "TSLA", "GOOGL", "AMZN", "NVDA", "META", "NFLX", "JPM", "V"].  
+   - Date inputs for start and end dates (default: last 5 years, allow up to 15 years).  
+   - Number input for timesteps (default 60).  
+   - Dropout rate slider (0.05–0.5, default 0.2).  
+   - Epochs slider (20–100, default 50).  
+   - Checkbox: "Use Early Stopping".  
+   - Checkbox: "Use Rolling Window Validation".  
+   - Checkbox: "Compare against ARIMA and Prophet baselines".  
+   - Button: "Train Model".  
+   - Button: "Download Trained Model".  
+
+3. Data preprocessing:  
+   - Fetch OHLCV data using yfinance.  
+   - Compute RSI(14) and MACD using `ta` library, merge with dataset.  
+   - Normalize features with MinMaxScaler.  
+   - Create sliding windows (60 timesteps → predict next).  
+
+4. Model architecture:  
+   - Conv1D(filters=64, kernel_size=3, activation='relu').  
+   - Bidirectional(LSTM(64, return_sequences=True)).  
+   - Attention layer (use tf.keras.layers.Attention).  
+   - Dropout(custom slider value).  
+   - Bidirectional(LSTM(64, return_sequences=True)).  
+   - GRU(64, return_sequences=True).  
+   - GRU(64).  
+   - Dense(50, relu) + Dense(1).  
+
+5. Training:  
+   - Compile (Adam, mse).  
+   - Train with given epochs, batch_size=32, optional EarlyStopping.  
+   - If rolling-window validation is selected, perform multiple train/test splits and average metrics.  
+
+6. Evaluation:  
+   - Predict test set, inverse scale, compute RMSE & MAE.  
+   - If baselines selected:  
+     - Train ARIMA model and Prophet model on same data.  
+     - Compute RMSE & MAE for baselines.  
+     - Display comparison table (DL vs ARIMA vs Prophet).  
+
+7. Database (SQLite):  
+   - Save model details into `models` table with columns: id, ticker, start_date, end_date, timesteps, dropout, epochs, train_rmse, test_rmse, train_mae, test_mae, created_at.  
+   - Save model as "models/{ticker}_{timestamp}.h5".  
+   - Insert row in DB for each run.  
+
+8. Download:  
+   - Add st.download_button to download .h5 model file.  
+
+9. Visualization:  
+   - Show line chart of Actual vs Predicted.  
+   - If rolling-window validation enabled, show error across folds.  
+   - If baselines selected, show comparison plot.  
+
+10. UI Enhancements:  
+   - Use Streamlit columns for layout.  
+   - st.metric widgets to highlight Train/Test RMSE & MAE.  
+   - st.success after training + saving model.  
+
+11. Ensure app runs fully with: `streamlit run app.py`.  
