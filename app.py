@@ -95,10 +95,13 @@ def get_data_with_indicators(ticker, start_date, end_date):
                 raise ValueError(f"No data found for ticker {ticker}")
             
             # Add technical indicators using ta library
-            data['RSI'] = ta.momentum.RSIIndicator(close=data['Close'], window=14).rsi()
+            # Ensure we pass 1-dimensional data to ta functions
+            close_prices = data['Close'].squeeze()  # Convert to 1D if needed
+            
+            data['RSI'] = ta.momentum.RSIIndicator(close=close_prices, window=14).rsi()
             
             # MACD
-            macd = ta.trend.MACD(close=data['Close'])
+            macd = ta.trend.MACD(close=close_prices)
             data['MACD'] = macd.macd()
             data['MACD_signal'] = macd.macd_signal()
             data['MACD_diff'] = macd.macd_diff()
