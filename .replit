@@ -16,27 +16,20 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Stock Forecasting"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "stock_forecasting_workflow"
+args = "Streamlit App"
 
 [[workflows.workflow]]
-name = "Stock Forecasting"
+name = "Streamlit App"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "pip install pandas numpy matplotlib scikit-learn yfinance tensorflow && python stock_forecasting.py"
+args = "streamlit run app.py --server.port 5000 --server.address 0.0.0.0"
+waitForPort = 5000
 
 [workflows.workflow.metadata]
-outputType = "console"
+outputType = "webview"
 
-[[workflows.workflow]]
-name = "stock_forecasting_workflow"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pip install pandas numpy matplotlib scikit-learn yfinance tensorflow && python stock_forecasting.py"
+[[ports]]
+localPort = 5000
+externalPort = 80
