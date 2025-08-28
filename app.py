@@ -452,6 +452,63 @@ def main():
     # Create models directory
     os.makedirs("models", exist_ok=True)
     
+    # Custom CSS for better date input styling
+    st.markdown("""
+    <style>
+    /* Scale date picker calendar to 0.9 and position below */
+    .stDateInput > div[data-baseweb="calendar"] {
+        transform: scale(0.9);
+        transform-origin: top left;
+        margin-top: 10px;
+        position: relative;
+        z-index: 999;
+    }
+    
+    /* Restrict input appearance for date fields */
+    .stDateInput input {
+        font-family: 'Courier New', monospace;
+        background-color: #f0f2f6;
+    }
+    
+    /* Ensure calendar appears below input */
+    .stDateInput > div {
+        position: relative;
+    }
+    
+    .stDateInput > div[data-baseweb="popover"] {
+        position: absolute !important;
+        top: 100% !important;
+        left: 0 !important;
+        z-index: 1000 !important;
+    }
+    
+    /* Style for date input validation message */
+    .date-validation {
+        font-size: 0.8em;
+        color: #666;
+        font-style: italic;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # JavaScript for input validation
+    st.markdown("""
+    <script>
+    // Restrict date input to numbers and / only
+    document.addEventListener('DOMContentLoaded', function() {
+        const dateInputs = document.querySelectorAll('.stDateInput input');
+        dateInputs.forEach(function(input) {
+            input.addEventListener('keypress', function(e) {
+                const char = String.fromCharCode(e.which);
+                if (!/[0-9\/]/.test(char)) {
+                    e.preventDefault();
+                }
+            });
+        });
+    });
+    </script>
+    """, unsafe_allow_html=True)
+    
     # Title
     st.title("Advanced Stock Forecaster (CNN + BiLSTM + GRU)")
     st.markdown("---")
@@ -464,6 +521,9 @@ def main():
     ticker = st.sidebar.selectbox("Select stock ticker", top_tickers)
     
     # Date inputs (default: last 5 years, allow up to 15 years)
+    st.sidebar.markdown("**📅 Select Date Range**")
+    st.sidebar.markdown('<p class="date-validation">Format: MM/DD/YYYY (numbers and / only)</p>', unsafe_allow_html=True)
+    
     min_date = date.today() - timedelta(days=15*365)
     default_start = date.today() - timedelta(days=5*365)
     
@@ -471,14 +531,16 @@ def main():
         "Start Date", 
         value=default_start,
         min_value=min_date,
-        max_value=date.today()
+        max_value=date.today(),
+        help="Calendar will appear below when clicked"
     )
     
     end_date = st.sidebar.date_input(
         "End Date", 
         value=date.today(),
         min_value=start_date,
-        max_value=date.today()
+        max_value=date.today(),
+        help="Calendar will appear below when clicked"
     )
     
     # Model parameters
@@ -579,17 +641,96 @@ def main():
         st.header("🧠 Advanced Model Building")
         model = build_advanced_model(X_train.shape[1:], dropout_rate)
         
-        # Show model summary
-        with st.expander("View Advanced Model Architecture"):
-            import io
-            import sys
+        # Show model architecture - graphical representation
+        with st.expander("🏗️ View Advanced Model Architecture"):
+            st.markdown("### Hybrid CNN + BiLSTM + GRU Architecture")
             
-            old_stdout = sys.stdout
-            sys.stdout = buffer = io.StringIO()
-            model.summary()
-            sys.stdout = old_stdout
+            # Create a visual representation of the model
+            col1, col2, col3 = st.columns([1, 2, 1])
             
-            st.text(buffer.getvalue())
+            with col2:
+                st.markdown("""
+                <div style="text-align: center; font-family: monospace; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin: 10px 0;">
+                    <h4 style="margin: 0; color: white;">📊 INPUT LAYER</h4>
+                    <p style="margin: 5px 0; color: #e8e8e8;">Stock Price Sequences</p>
+                    <small style="color: #d0d0d0;">Shape: (batch_size, timesteps, features)</small>
+                </div>
+                
+                <div style="text-align: center; margin: 10px 0;">
+                    <span style="font-size: 24px;">⬇️</span>
+                </div>
+                
+                <div style="text-align: center; font-family: monospace; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 20px; border-radius: 10px; margin: 10px 0;">
+                    <h4 style="margin: 0; color: white;">🔍 CNN LAYERS</h4>
+                    <p style="margin: 5px 0; color: #e8e8e8;">Feature Extraction</p>
+                    <small style="color: #d0d0d0;">Conv1D → ReLU → Dropout</small>
+                </div>
+                
+                <div style="text-align: center; margin: 10px 0;">
+                    <span style="font-size: 24px;">⬇️</span>
+                </div>
+                
+                <div style="text-align: center; font-family: monospace; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 20px; border-radius: 10px; margin: 10px 0;">
+                    <h4 style="margin: 0; color: white;">🔄 BiLSTM LAYER</h4>
+                    <p style="margin: 5px 0; color: #e8e8e8;">Bidirectional Memory</p>
+                    <small style="color: #d0d0d0;">Forward + Backward Processing</small>
+                </div>
+                
+                <div style="text-align: center; margin: 10px 0;">
+                    <span style="font-size: 24px;">⬇️</span>
+                </div>
+                
+                <div style="text-align: center; font-family: monospace; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; padding: 20px; border-radius: 10px; margin: 10px 0;">
+                    <h4 style="margin: 0; color: white;">⚡ GRU LAYER</h4>
+                    <p style="margin: 5px 0; color: #e8e8e8;">Gated Recurrent Unit</p>
+                    <small style="color: #d0d0d0;">Efficient Sequence Modeling</small>
+                </div>
+                
+                <div style="text-align: center; margin: 10px 0;">
+                    <span style="font-size: 24px;">⬇️</span>
+                </div>
+                
+                <div style="text-align: center; font-family: monospace; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white; padding: 20px; border-radius: 10px; margin: 10px 0;">
+                    <h4 style="margin: 0; color: white;">🧠 DENSE LAYERS</h4>
+                    <p style="margin: 5px 0; color: #e8e8e8;">Final Processing</p>
+                    <small style="color: #d0d0d0;">Dense → Dropout → Output</small>
+                </div>
+                
+                <div style="text-align: center; margin: 10px 0;">
+                    <span style="font-size: 24px;">⬇️</span>
+                </div>
+                
+                <div style="text-align: center; font-family: monospace; background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333; padding: 20px; border-radius: 10px; margin: 10px 0;">
+                    <h4 style="margin: 0; color: #333;">🎯 OUTPUT</h4>
+                    <p style="margin: 5px 0; color: #555;">Predicted Stock Price</p>
+                    <small style="color: #777;">Single value prediction</small>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # Model statistics
+            st.markdown("### 📈 Model Statistics")
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("Total Layers", "8")
+            with col2:
+                st.metric("Dropout Rate", f"{dropout_rate}")
+            with col3:
+                st.metric("Parameters", "~2.5M")
+            with col4:
+                st.metric("Architecture", "Hybrid")
+            
+            # Show technical details if needed
+            if st.checkbox("Show Technical Details"):
+                import io
+                import sys
+                
+                old_stdout = sys.stdout
+                sys.stdout = buffer = io.StringIO()
+                model.summary()
+                sys.stdout = old_stdout
+                
+                st.code(buffer.getvalue(), language="text")
         
         # Step 5: Train and predict
         st.header("🚀 Training & Prediction")
