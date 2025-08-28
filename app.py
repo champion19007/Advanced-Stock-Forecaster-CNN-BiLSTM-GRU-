@@ -9,7 +9,10 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error, accuracy_score, f1_score, precision_score, recall_score
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
 import yfinance as yf
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
@@ -644,20 +647,341 @@ def main():
         # Predictions visualization
         st.subheader("Actual vs Predicted Prices")
         
-        # Create DataFrame for plotting
+        # Create DataFrame for plotting - ensure all arrays have same length
+        min_length = len(actual)
         results_df = pd.DataFrame({
-            'Actual': actual,
-            'Deep Learning': predictions
+            'Actual': actual[:min_length],
+            'Deep Learning': predictions[:min_length]
         })
         
-        # Add baseline predictions if available
+        # Add baseline predictions if available (truncate to match length)
         if baseline_results:
             if baseline_results['ARIMA']:
-                results_df['ARIMA'] = baseline_results['ARIMA']['predictions']
+                arima_pred = baseline_results['ARIMA']['predictions'][:min_length]
+                results_df['ARIMA'] = arima_pred
             if baseline_results['Prophet']:
-                results_df['Prophet'] = baseline_results['Prophet']['predictions']
+                prophet_pred = baseline_results['Prophet']['predictions'][:min_length]
+                results_df['Prophet'] = prophet_pred
         
         st.line_chart(results_df)
+        
+        # Advanced Analytics and Investment Insights
+        st.header("📈 Advanced Analytics & Investment Insights")
+        
+        # Calculate additional metrics for investment analysis
+        def calculate_advanced_metrics(actual_prices, predicted_prices):
+            """Calculate comprehensive metrics for investment analysis"""
+            
+            # Direction accuracy (did we predict up/down correctly?)
+            actual_direction = np.diff(actual_prices) > 0
+            predicted_direction = np.diff(predicted_prices) > 0
+            
+            direction_accuracy = accuracy_score(actual_direction, predicted_direction) * 100
+            
+            # Calculate percentage errors
+            percentage_errors = np.abs((actual_prices - predicted_prices) / actual_prices * 100)
+            mape = np.mean(percentage_errors)  # Mean Absolute Percentage Error
+            
+            # Calculate R² (coefficient of determination)
+            from sklearn.metrics import r2_score
+            r2 = r2_score(actual_prices, predicted_prices)
+            
+            # Volatility metrics
+            actual_volatility = np.std(actual_prices)
+            predicted_volatility = np.std(predicted_prices)
+            
+            return {
+                'direction_accuracy': direction_accuracy,
+                'mape': mape,
+                'r2_score': r2,
+                'actual_volatility': actual_volatility,
+                'predicted_volatility': predicted_volatility
+            }
+        
+        # Calculate investment signals
+        def generate_investment_signals(actual_prices, predicted_prices, current_price):
+            """Generate buy/sell/hold signals based on predictions"""
+            
+            # Calculate price change predictions
+            price_change = predicted_prices[-1] - current_price
+            price_change_pct = (price_change / current_price) * 100
+            
+            # Generate signals
+            if price_change_pct > 5:
+                signal = "🟢 STRONG BUY"
+                confidence = "High"
+                reason = f"Model predicts {price_change_pct:.1f}% price increase"
+            elif price_change_pct > 2:
+                signal = "🟡 BUY"
+                confidence = "Medium"
+                reason = f"Model predicts {price_change_pct:.1f}% price increase"
+            elif price_change_pct > -2:
+                signal = "🟠 HOLD"
+                confidence = "Medium"
+                reason = f"Model predicts minimal price change ({price_change_pct:.1f}%)"
+            elif price_change_pct > -5:
+                signal = "🔴 SELL"
+                confidence = "Medium"
+                reason = f"Model predicts {price_change_pct:.1f}% price decrease"
+            else:
+                signal = "🔴 STRONG SELL"
+                confidence = "High"
+                reason = f"Model predicts {price_change_pct:.1f}% price decrease"
+            
+            return signal, confidence, reason, price_change_pct
+        
+        # Calculate position sizing recommendation
+        def calculate_position_sizing(signal, confidence, portfolio_value=10000):
+            """Calculate recommended position size based on signal strength"""
+            
+            if "STRONG BUY" in signal:
+                position_pct = 0.15 if confidence == "High" else 0.10
+            elif "BUY" in signal:
+                position_pct = 0.10 if confidence == "High" else 0.05
+            elif "HOLD" in signal:
+                position_pct = 0.02
+            else:  # SELL signals
+                position_pct = 0.0
+            
+            recommended_amount = portfolio_value * position_pct
+            return position_pct * 100, recommended_amount
+        
+        # Get advanced metrics
+        advanced_metrics = calculate_advanced_metrics(actual, predictions)
+        current_stock_price = float(stock_data['Close'].iloc[-1])
+        
+        # Display comprehensive metrics
+        st.subheader("📊 Comprehensive Performance Metrics")
+        
+        col1, col2, col3, col4, col5 = st.columns(5)
+        with col1:
+            st.metric("Direction Accuracy", f"{advanced_metrics['direction_accuracy']:.1f}%")
+        with col2:
+            st.metric("MAPE", f"{advanced_metrics['mape']:.2f}%")
+        with col3:
+            st.metric("R² Score", f"{advanced_metrics['r2_score']:.3f}")
+        with col4:
+            st.metric("Volatility", f"${advanced_metrics['actual_volatility']:.2f}")
+        with col5:
+            st.metric("Test Accuracy", f"{100 - advanced_metrics['mape']:.1f}%")
+        
+        # Generate investment recommendations
+        signal, confidence, reason, expected_change = generate_investment_signals(
+            actual, predictions, current_stock_price
+        )
+        
+        st.subheader("💰 Investment Recommendation")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Signal", signal)
+        with col2:
+            st.metric("Confidence", confidence)
+        with col3:
+            st.metric("Expected Change", f"{expected_change:.1f}%")
+        
+        st.info(f"**Reasoning**: {reason}")
+        
+        # Portfolio analysis
+        st.subheader("💼 Portfolio Allocation & Risk Analysis")
+        
+        # Portfolio value input
+        portfolio_value = st.slider(
+            "Portfolio Value ($)", 
+            min_value=1000, 
+            max_value=1000000, 
+            value=10000, 
+            step=1000
+        )
+        
+        position_pct, recommended_amount = calculate_position_sizing(signal, confidence, portfolio_value)
+        shares_to_buy = int(recommended_amount / current_stock_price)
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Recommended Position", f"{position_pct:.1f}%")
+        with col2:
+            st.metric("Investment Amount", f"${recommended_amount:,.0f}")
+        with col3:
+            st.metric("Shares to Buy", f"{shares_to_buy}")
+        with col4:
+            if shares_to_buy > 0:
+                potential_profit = shares_to_buy * current_stock_price * (expected_change / 100)
+                st.metric("Potential Profit", f"${potential_profit:,.0f}")
+            else:
+                st.metric("Risk Level", "Low")
+        
+        # Risk assessment
+        risk_level = "High" if abs(expected_change) > 5 else "Medium" if abs(expected_change) > 2 else "Low"
+        st.warning(f"⚠️ **Risk Level: {risk_level}** - Based on predicted volatility of {expected_change:.1f}%")
+        
+        # Interactive price prediction chart with Plotly
+        st.subheader("📈 Interactive Price Prediction Chart")
+        
+        fig = go.Figure()
+        
+        # Add actual prices
+        fig.add_trace(go.Scatter(
+            y=actual,
+            mode='lines',
+            name='Actual Price',
+            line=dict(color='blue', width=2)
+        ))
+        
+        # Add predicted prices
+        fig.add_trace(go.Scatter(
+            y=predictions,
+            mode='lines',
+            name='Predicted Price',
+            line=dict(color='red', width=2, dash='dash')
+        ))
+        
+        # Add baseline predictions if available
+        if baseline_results and baseline_results['ARIMA']:
+            arima_pred = baseline_results['ARIMA']['predictions'][:min_length]
+            fig.add_trace(go.Scatter(
+                y=arima_pred,
+                mode='lines',
+                name='ARIMA Baseline',
+                line=dict(color='green', width=1)
+            ))
+        
+        if baseline_results and baseline_results['Prophet']:
+            prophet_pred = baseline_results['Prophet']['predictions'][:min_length]
+            fig.add_trace(go.Scatter(
+                y=prophet_pred,
+                mode='lines',
+                name='Prophet Baseline',
+                line=dict(color='orange', width=1)
+            ))
+        
+        fig.update_layout(
+            title=f"{ticker} Stock Price Prediction Analysis",
+            xaxis_title="Days",
+            yaxis_title="Price ($)",
+            hovermode='x unified',
+            height=500
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Prediction confidence intervals
+        st.subheader("📊 Prediction Confidence & Error Analysis")
+        
+        # Calculate prediction errors
+        errors = predictions - actual
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Error distribution
+            fig_error = px.histogram(
+                errors, 
+                title="Prediction Error Distribution",
+                labels={'value': 'Prediction Error ($)', 'count': 'Frequency'}
+            )
+            st.plotly_chart(fig_error, use_container_width=True)
+        
+        with col2:
+            # Error over time
+            fig_error_time = px.line(
+                y=errors, 
+                title="Prediction Error Over Time",
+                labels={'y': 'Error ($)', 'index': 'Days'}
+            )
+            st.plotly_chart(fig_error_time, use_container_width=True)
+        
+        # Trading strategy simulation
+        st.subheader("💹 Trading Strategy Simulation")
+        
+        def simulate_trading_strategy(actual_prices, predicted_prices, initial_capital=10000):
+            """Simulate a simple trading strategy based on predictions"""
+            
+            capital = initial_capital
+            shares = 0
+            portfolio_values = [initial_capital]
+            trades = []
+            
+            for i in range(1, len(predicted_prices)):
+                if i < len(predicted_prices) - 1:  # Don't trade on last day
+                    predicted_return = (predicted_prices[i+1] - actual_prices[i]) / actual_prices[i]
+                    
+                    if predicted_return > 0.02:  # Buy if predicted return > 2%
+                        if capital > actual_prices[i]:
+                            shares_to_buy = int(capital * 0.1 / actual_prices[i])  # Use 10% of capital
+                            if shares_to_buy > 0:
+                                shares += shares_to_buy
+                                capital -= shares_to_buy * actual_prices[i]
+                                trades.append(f"Day {i}: BUY {shares_to_buy} shares at ${actual_prices[i]:.2f}")
+                    
+                    elif predicted_return < -0.02 and shares > 0:  # Sell if predicted return < -2%
+                        shares_to_sell = int(shares * 0.5)  # Sell 50% of holdings
+                        if shares_to_sell > 0:
+                            shares -= shares_to_sell
+                            capital += shares_to_sell * actual_prices[i]
+                            trades.append(f"Day {i}: SELL {shares_to_sell} shares at ${actual_prices[i]:.2f}")
+                
+                # Calculate portfolio value
+                portfolio_value = capital + shares * actual_prices[i]
+                portfolio_values.append(portfolio_value)
+            
+            final_value = portfolio_values[-1]
+            total_return = (final_value - initial_capital) / initial_capital * 100
+            
+            return portfolio_values, trades, final_value, total_return
+        
+        # Run simulation
+        portfolio_values, trades, final_value, total_return = simulate_trading_strategy(actual, predictions)
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Starting Capital", f"${10000:,}")
+        with col2:
+            st.metric("Final Portfolio Value", f"${final_value:,.0f}")
+        with col3:
+            st.metric("Total Return", f"{total_return:.1f}%")
+        
+        # Portfolio performance chart
+        fig_portfolio = px.line(
+            y=portfolio_values,
+            title="Portfolio Performance Simulation",
+            labels={'y': 'Portfolio Value ($)', 'index': 'Days'}
+        )
+        fig_portfolio.add_hline(y=10000, line_dash="dash", line_color="gray", annotation_text="Initial Capital")
+        st.plotly_chart(fig_portfolio, use_container_width=True)
+        
+        # Recent trades
+        if trades:
+            st.subheader("📋 Recent Trading Signals")
+            recent_trades = trades[-5:] if len(trades) > 5 else trades
+            for trade in recent_trades:
+                st.text(trade)
+        
+        # Market sentiment analysis
+        st.subheader("🎯 Market Sentiment & Technical Analysis")
+        
+        # Calculate technical indicators sentiment
+        latest_rsi = float(stock_data['RSI'].iloc[-1])
+        latest_macd = float(stock_data['MACD'].iloc[-1])
+        latest_macd_signal = float(stock_data['MACD_signal'].iloc[-1])
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            rsi_sentiment = "Overbought" if latest_rsi > 70 else "Oversold" if latest_rsi < 30 else "Neutral"
+            rsi_color = "red" if latest_rsi > 70 else "green" if latest_rsi < 30 else "blue"
+            st.metric("RSI Sentiment", rsi_sentiment)
+            st.caption(f"RSI: {latest_rsi:.1f}")
+        
+        with col2:
+            macd_sentiment = "Bullish" if latest_macd > latest_macd_signal else "Bearish"
+            st.metric("MACD Sentiment", macd_sentiment)
+            st.caption(f"MACD: {latest_macd:.3f}")
+        
+        with col3:
+            price_momentum = "Upward" if predictions[-1] > actual[-1] else "Downward"
+            st.metric("Price Momentum", price_momentum)
+            st.caption("Based on AI prediction")
         
         # Training history
         st.subheader("Training Progress")
