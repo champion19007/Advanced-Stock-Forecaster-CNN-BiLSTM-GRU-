@@ -1201,9 +1201,46 @@ def main():
         5. Click "Train Model" to start the comprehensive analysis
         
         ### Model Architecture:
-        ```
-        Conv1D → BiLSTM → BiLSTM → BiLSTM → GRU → GRU → Dense → Output
-        ```
+        """)
+        
+        # Create graphical model architecture display
+        st.markdown("""
+        <div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; margin: 20px 0; font-family: monospace;">
+            <div style="background: linear-gradient(45deg, #FF6B6B, #4ECDC4); color: white; padding: 10px 15px; border-radius: 25px; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                📊 Conv1D
+            </div>
+            <span style="font-size: 20px; color: #666;">→</span>
+            <div style="background: linear-gradient(45deg, #45B7D1, #96CEB4); color: white; padding: 10px 15px; border-radius: 25px; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                🔄 BiLSTM
+            </div>
+            <span style="font-size: 20px; color: #666;">→</span>
+            <div style="background: linear-gradient(45deg, #45B7D1, #96CEB4); color: white; padding: 10px 15px; border-radius: 25px; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                🔄 BiLSTM
+            </div>
+            <span style="font-size: 20px; color: #666;">→</span>
+            <div style="background: linear-gradient(45deg, #45B7D1, #96CEB4); color: white; padding: 10px 15px; border-radius: 25px; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                🔄 BiLSTM
+            </div>
+            <span style="font-size: 20px; color: #666;">→</span>
+            <div style="background: linear-gradient(45deg, #F7DC6F, #BB8FCE); color: white; padding: 10px 15px; border-radius: 25px; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                ⚡ GRU
+            </div>
+            <span style="font-size: 20px; color: #666;">→</span>
+            <div style="background: linear-gradient(45deg, #F7DC6F, #BB8FCE); color: white; padding: 10px 15px; border-radius: 25px; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                ⚡ GRU
+            </div>
+            <span style="font-size: 20px; color: #666;">→</span>
+            <div style="background: linear-gradient(45deg, #A569BD, #F1948A); color: white; padding: 10px 15px; border-radius: 25px; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                🧠 Dense
+            </div>
+            <span style="font-size: 20px; color: #666;">→</span>
+            <div style="background: linear-gradient(45deg, #58D68D, #F8C471); color: white; padding: 10px 15px; border-radius: 25px; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                🎯 Output
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("""
         """)
         
         # Show sample results from database
@@ -1211,13 +1248,32 @@ def main():
         try:
             conn = sqlite3.connect('stock_forecaster.db')
             recent_models = pd.read_sql_query(
-                "SELECT ticker, test_rmse, test_mae, created_at FROM models ORDER BY created_at DESC LIMIT 5",
+                "SELECT ticker, test_rmse, test_mae, created_at, model_filename FROM models ORDER BY created_at DESC LIMIT 5",
                 conn
             )
             conn.close()
             
             if not recent_models.empty:
                 st.dataframe(recent_models, use_container_width=True)
+                
+                # Add download buttons for recent models
+                st.subheader("📥 Download Recent Models")
+                for idx, row in recent_models.iterrows():
+                    if os.path.exists(row['model_filename']):
+                        with open(row['model_filename'], 'rb') as file:
+                            col1, col2, col3 = st.columns([2, 1, 1])
+                            with col1:
+                                st.text(f"{row['ticker']} - {row['created_at']}")
+                            with col2:
+                                st.text(f"RMSE: {row['test_rmse']:.2f}")
+                            with col3:
+                                st.download_button(
+                                    label="⬇️ Download",
+                                    data=file.read(),
+                                    file_name=f"{row['ticker']}_model_{row['created_at']}.h5",
+                                    mime="application/octet-stream",
+                                    key=f"download_{idx}"
+                                )
             else:
                 st.info("No models trained yet. Train your first model to see results here!")
                 
