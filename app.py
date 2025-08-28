@@ -94,6 +94,10 @@ def get_data_with_indicators(ticker, start_date, end_date):
             if data.empty:
                 raise ValueError(f"No data found for ticker {ticker}")
             
+            # Flatten column index if it's a MultiIndex (happens with single ticker sometimes)
+            if isinstance(data.columns, pd.MultiIndex):
+                data.columns = data.columns.droplevel(1)
+            
             # Add technical indicators using ta library
             # Ensure we pass 1-dimensional data to ta functions
             close_prices = data['Close'].squeeze()  # Convert to 1D if needed
