@@ -467,9 +467,9 @@ def main():
     /* Restrict input appearance for date fields */
     .stDateInput input {
         font-family: 'Courier New', monospace;
-        background-color: #f0f2f6 !important;
-        color: #262730 !important;
-        border: 1px solid #d4d4d4 !important;
+        background-color: #000000 !important;
+        color: #ffffff !important;
+        border: 1px solid #333333 !important;
     }
     
     /* Ensure calendar appears below input */
