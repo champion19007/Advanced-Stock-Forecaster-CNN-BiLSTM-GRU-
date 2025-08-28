@@ -469,7 +469,8 @@ def main():
         font-family: 'Courier New', monospace;
         background-color: #000000 !important;
         color: #ffffff !important;
-        border: 1px solid #333333 !important;
+        border: none !important;
+        border-radius: 4px !important;
     }
     
     /* Ensure calendar appears below input */
