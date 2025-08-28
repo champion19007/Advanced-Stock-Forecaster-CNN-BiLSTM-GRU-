@@ -528,12 +528,14 @@ def main():
         with col1:
             st.metric("Data Points", len(stock_data))
         with col2:
-            st.metric("Current Price", f"${stock_data['Close'].iloc[-1]:.2f}")
+            current_price = float(stock_data['Close'].iloc[-1])
+            st.metric("Current Price", f"${current_price:.2f}")
         with col3:
-            price_change = stock_data['Close'].iloc[-1] - stock_data['Close'].iloc[0]
+            price_change = float(stock_data['Close'].iloc[-1]) - float(stock_data['Close'].iloc[0])
             st.metric("Total Change", f"${price_change:.2f}")
         with col4:
-            st.metric("RSI (Latest)", f"{stock_data['RSI'].iloc[-1]:.1f}")
+            latest_rsi = float(stock_data['RSI'].iloc[-1])
+            st.metric("RSI (Latest)", f"{latest_rsi:.1f}")
         
         # Show technical indicators
         st.subheader("Technical Indicators")
